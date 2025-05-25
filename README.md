@@ -3,41 +3,48 @@
 # TailAPI
 
 ## Vision
-TailAPI helps developers and QA teams capture API calls from real browser sessions and transform them into Postman test collections with intelligent variable extraction, flow visualization, and automated documentation.
+
+TailAPI helps developers and QA teams capture API calls from real browser or app sessions through a local proxy server and transform them into Postman test collections with intelligent variable extraction, flow visualization, and automated documentation.
 
 ---
 
 ## Key Features
 
-### 1. API Recorder (Browser Extension or Proxy)
-- Records HTTP(S) requests from browser sessions
+### 1. Proxy-Based API Capture
+
+- Operates as a local proxy server
+- Intercepts HTTP and HTTPS traffic (with self-signed cert)
 - Captures method, URL, headers, body, response
-- Filters out non-essential endpoints
-- Optionally groups by session or user actions
+- Filters out non-essential or third-party calls
+- Groups captured calls by session
 
 ### 2. Variable Extraction and Suggestion Engine
+
 - Detects patterns such as tokens, IDs, timestamps
 - Suggests variables for substitution in captured APIs
 - Allows editing/approval of suggested variables
 
 ### 3. API Collection Builder
-- UI to view/manage API requests
+
+- UI to view/manage captured requests
 - Group into collections and folders
-- Request editing support (headers, body, etc.)
+- Edit captured requests (headers, body, etc.)
 - Export to Postman v2.1 JSON
 
 ### 4. Flowchart & API Dependency Mapping
-- Graph view of captured API sequence
-- Suggests logical dependencies between APIs
-- User can modify API chaining visually
-- Based on usage of prior response values in later calls
+
+- Visual graph view of captured API sequences
+- Auto-suggests dependencies based on variable usage
+- User can modify and annotate the flow
 
 ### 5. Postman Exporter
+
 - Generates Postman collection JSON file
 - Uses variables and dependency order
 - Compatible with Postman import/export
 
 ### 6. Documentation Generator
+
 - Creates markdown or HTML documentation
 - Includes:
   - API name and URL
@@ -49,6 +56,7 @@ TailAPI helps developers and QA teams capture API calls from real browser sessio
 ---
 
 ## Target Users
+
 - Developers
 - QA Engineers
 - DevOps Engineers
@@ -59,53 +67,65 @@ TailAPI helps developers and QA teams capture API calls from real browser sessio
 ## Tech Stack
 
 ### Frontend
+
 - React (w/ TypeScript)
 - Tailwind CSS
 - Zustand or Redux
-- React Flow or D3.js
-- CodeMirror/Monaco Editor
+- React Flow for dependency graph
+- CodeMirror/Monaco for request editing
 
 ### Backend
-- Node.js + Express (TypeScript)
-- Lightweight storage (JSON or SQLite initially)
 
-### Extension
-- Chrome Extension (Manifest V3)
-- Uses `chrome.webRequest` API to capture network traffic
+- Node.js + Express (TypeScript)
+- JSON or SQLite storage for MVP
+
+### Proxy
+
+- `http-mitm-proxy` (Node.js MITM proxy)
+  - Handles HTTP/HTTPS traffic
+  - Self-signed cert injection
+- Optionally explore `mitmproxy` (Python) if needed
 
 ---
 
 ## Development Plan
 
-### Week 1 – Setup & Capture
-- React app + Tailwind
-- Express server (TypeScript)
-- Chrome extension: capture API traffic
+### Week 1 – Setup & Proxy Capture
+
+- Implement proxy server using `http-mitm-proxy`
+- TLS interception with root cert generation
+- Log full request and response details
+- Store sessions in JSON or SQLite
 
 ### Week 2 – Variable & Request Manager
-- Suggest and replace dynamic values
-- UI to edit and group requests
-- Initial Postman collection creation logic
 
-### Week 3 – Flowchart + Dependencies
-- Visualize API calls
-- Suggest dependencies based on response linkage
-- User editing of call order
+- Analyze and suggest variables (ID, token, timestamp)
+- Create UI to review/edit captured requests
+- Allow organizing into collections
 
-### Week 4 – Documentation + Export
-- Markdown/HTML doc generation
-- Export flowchart + requests to Postman JSON
-- Refactor and polish UX/UI
+### Week 3 – Flowchart & Dependencies
 
-### Week 5 – Testing & Launch
-- Validate with real apps (GitHub, etc.)
-- Add edge-case handling
-- Prepare MVP release or share for feedback
+- Visualize API call flow with React Flow
+- Suggest dependencies based on variable usage across calls
+- Let users edit relationships and sequence
+
+### Week 4 – Postman Export + Docs
+
+- Generate Postman v2.1 collections from captured flow
+- Build markdown/HTML doc generator
+- Add formatting and response examples
+
+### Week 5 – Testing & UX Polish
+
+- Test with real apps and traffic
+- Handle proxy edge cases (timeouts, large payloads)
+- Finalize MVP with a clean UI and export options
 
 ---
 
 ## Future Features
-- GraphQL/WebSocket support
-- Cloud sync + user accounts
-- Integration with Newman CLI
-- AI-assisted flow documentation
+
+- GraphQL and WebSocket support
+- User accounts and cloud sync
+- CLI runner integration (e.g. Newman)
+- AI-based flow and test suggestion
