@@ -1,4 +1,5 @@
-![ChatGPT Image May 25, 2025, 06_01_42 PM](https://github.com/user-attachments/assets/845d75a5-7142-4a71-ba47-7f8ba4ee7729)
+![image](https://github.com/user-attachments/assets/ada2838f-3e70-49f7-a5c7-ae8cd9753466)
+
 
 # TailAPI
 
