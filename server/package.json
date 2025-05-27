@@ -8,6 +8,8 @@
     "build": "tsc"
   },
   "dependencies": {
+    "assert": "^2.1.0",
+    "child_process": "^1.0.2",
     "express": "^5.1.0",
     "http-mitm-proxy": "^1.0.0",
     "mongoose": "^6.0.0",
