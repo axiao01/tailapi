@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive MECM Application Reconciliation Guide</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Chosen Palette: Slate Gray & Amber -->
+    <!-- Application Structure Plan: A task-oriented "cookbook" SPA. It guides the user from understanding the core problem (visualized comparison) through an interactive data model diagram, to a central "Query Cookbook" section. This interactive section allows users to select different query "recipes" (e.g., initial match, find install path) via tabs and toggle advanced matching logic (Fuzzy vs. LIKE), dynamically updating the code. This is more usable than a linear document, as users can directly engage with and customize the solutions. The structure concludes with scannable best practices and recommendations. -->
+    <!-- Visualization & Content Choices: 
+        - Core Problem: Side-by-side cards (HTML/CSS) to visually contrast deployed vs. installed names. Goal: Inform.
+        - Data Model: Interactive diagram (HTML/CSS/JS) of MECM views, where clicking a view reveals its details. Goal: Organize/Relationships. Justification: More intuitive than static tables.
+        - SQL Queries: A tabbed interface with a code viewer (HTML/CSS/JS). Interaction: Tabs switch queries; a toggle switches between Fuzzy and LIKE logic in the WHERE clause; a copy button provides utility. Goal: Provide Tool. Justification: Addresses the report's key challenge (SQL version compatibility) interactively.
+        - Performance/Recommendations: Icon-based grid layout (HTML/CSS). Goal: Inform. Justification: Enhances scannability.
+        - NO SVG/Mermaid used.
+    -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+        .tab.active {
+            border-color: #f59e0b;
+            color: #f59e0b;
+            font-weight: 600;
+        }
+        .toggle-bg:after {
+            content: '';
+            @apply absolute top-0.5 left-0.5 bg-white border border-gray-300 rounded-full h-5 w-5 transition-transform shadow-sm;
+        }
+        input:checked + .toggle-bg:after {
+            @apply transform translate-x-full;
+        }
+        input:checked + .toggle-bg {
+            @apply bg-amber-500;
+        }
+        .data-view-card {
+            transition: all 0.3s ease-in-out;
+        }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800">
+
+    <div class="container mx-auto p-4 sm:p-6 lg:p-8">
+
+        <header class="text-center mb-12">
+            <h1 class="text-4xl font-bold text-slate-900 mb-2">Interactive MECM Application Reconciliation Guide</h1>
+            <p class="text-lg text-slate-600 max-w-3xl mx-auto">An interactive cookbook for matching deployed vs. installed software and finding installation paths using SQL.</p>
+        </header>
+
+        <main class="space-y-16">
+            
+            <!-- Section 1: The Core Problem -->
+            <section id="problem">
+                <h2 class="text-3xl font-bold text-slate-900 mb-6 text-center">The Core Problem: Similar, But Not Identical</h2>
+                 <div class="max-w-4xl mx-auto text-center text-slate-700 mb-8">
+                    <p>This application addresses the central challenge of MECM reporting: application names in deployment records are often simplified for administrators, while the names in the installed software inventory are raw metadata from the installer. This guide provides the strategies and SQL code to accurately bridge this gap.</p>
+                </div>
+                <div class="flex flex-col md:flex-row justify-center items-stretch gap-8">
+                    <div class="bg-white p-6 rounded-lg shadow-md border border-slate-200 w-full md:w-1/2 text-center">
+                        <h3 class="font-semibold text-slate-500 mb-2 text-lg">Deployed Application Name</h3>
+                        <p class="text-2xl font-mono bg-slate-100 p-4 rounded-md text-slate-800">Adobe Acrobat Reader DC</p>
+                        <p class="text-sm text-slate-500 mt-3">As seen in `v_Advertisement`</p>
+                    </div>
+                    <div class="flex items-center justify-center text-4xl text-amber-500 font-bold">≠</div>
+                    <div class="bg-white p-6 rounded-lg shadow-md border border-slate-200 w-full md:w-1/2 text-center">
+                        <h3 class="font-semibold text-slate-500 mb-2 text-lg">Installed Software Name</h3>
+                        <p class="text-2xl font-mono bg-slate-100 p-4 rounded-md text-slate-800">Adobe Acrobat Reader DC (2024.002.20736)</p>
+                        <p class="text-sm text-slate-500 mt-3">As seen in `v_GS_ADD_REMOVE_PROGRAMS`</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Section 2: Interactive Data Model -->
+            <section id="datamodel">
+                <h2 class="text-3xl font-bold text-slate-900 mb-6 text-center">Interactive Data Model</h2>
+                <div class="max-w-4xl mx-auto text-center text-slate-700 mb-8">
+                    <p>Understanding MECM's data structure is key. The `ResourceID` is the universal key that links device-specific data across different views. Click on any view below to see its purpose and key fields. This helps visualize how the final queries are constructed.</p>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 text-center">
+                    <!-- Column 1: Deployment -->
+                    <div class="space-y-4">
+                        <h3 class="font-bold text-xl text-slate-700">Deployment Info</h3>
+                        <div class="data-view-card bg-white p-4 rounded-lg shadow-md border border-blue-200 cursor-pointer hover:shadow-xl hover:scale-105" onclick="showDetails('v_DeploymentSummary')">v_DeploymentSummary</div>
+                        <div class="data-view-card bg-white p-4 rounded-lg shadow-md border border-blue-200 cursor-pointer hover:shadow-xl hover:scale-105" onclick="showDetails('v_Advertisement')">v_Advertisement</div>
+                        <div class="data-view-card bg-white p-4 rounded-lg shadow-md border border-blue-200 cursor-pointer hover:shadow-xl hover:scale-105" onclick="showDetails('v_Program')">v_Program</div>
+                    </div>
+                    <!-- Column 2: The Link -->
+                    <div class="space-y-4 flex flex-col justify-center items-center">
+                        <h3 class="font-bold text-xl text-amber-700">The Link</h3>
+                        <div class="data-view-card bg-amber-100 p-4 rounded-lg shadow-lg border-2 border-amber-400 cursor-pointer hover:shadow-2xl hover:scale-105" onclick="showDetails('v_R_System')">v_R_System (ResourceID)</div>
+                    </div>
+                    <!-- Column 3: Inventory -->
+                    <div class="space-y-4">
+                        <h3 class="font-bold text-xl text-slate-700">Inventory Info</h3>
+                        <div class="data-view-card bg-white p-4 rounded-lg shadow-md border border-green-200 cursor-pointer hover:shadow-xl hover:scale-105" onclick="showDetails('v_Add_Remove_Programs')">v_Add_Remove_Programs</div>
+                        <div class="data-view-card bg-white p-4 rounded-lg shadow-md border border-green-200 cursor-pointer hover:shadow-xl hover:scale-105" onclick="showDetails('v_GS_INSTALLED_SOFTWARE_CATEGORIZED')">v_GS_INSTALLED_SOFTWARE_CATEGORIZED</div>
+                    </div>
+                </div>
+                <!-- Modal for details -->
+                <div id="detailsModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 flex justify-center items-center hidden" onclick="closeModal()">
+                    <div id="modalContent" class="bg-white p-8 rounded-lg shadow-2xl max-w-lg w-full text-left" onclick="event.stopPropagation()">
+                        <!-- Content injected by JS -->
+                    </div>
+                </div>
+            </section>
+
+            <!-- Section 3: The Query Cookbook -->
+            <section id="queries">
+                <h2 class="text-3xl font-bold text-slate-900 mb-6 text-center">The SQL Query Cookbook</h2>
+                 <div class="max-w-4xl mx-auto text-center text-slate-700 mb-8">
+                    <p>This is the heart of the guide. Select a query "recipe" from the tabs below. Use the toggle to switch between advanced fuzzy matching (for modern SQL Server versions) and traditional `LIKE` matching for older versions. The code will update instantly. Use the copy button to grab the code for your own use.</p>
+                </div>
+                <div class="bg-white rounded-lg shadow-lg border border-slate-200 overflow-hidden">
+                    <div class="p-4 sm:p-6 border-b border-slate-200 flex flex-col sm:flex-row justify-between items-center gap-4">
+                        <div id="tabs" class="flex flex-wrap border-b-2 border-slate-200">
+                            <button class="tab active px-4 py-2 border-b-4" onclick="selectQuery(0)">1. Initial Match</button>
+                            <button class="tab px-4 py-2 border-b-4 border-transparent" onclick="selectQuery(1)">2. Get Install Location</button>
+                            <button class="tab px-4 py-2 border-b-4 border-transparent" onclick="selectQuery(2)">3. Find Unmanaged Apps</button>
+                        </div>
+                        <div class="flex items-center space-x-4">
+                            <span class="text-sm font-medium text-slate-600">Use Fuzzy Match (SQL 2025+):</span>
+                            <label for="fuzzyToggle" class="flex items-center cursor-pointer">
+                                <div class="relative">
+                                    <input type="checkbox" id="fuzzyToggle" class="sr-only" onchange="toggleFuzzy()">
+                                    <div class="toggle-bg bg-gray-200 border-2 border-transparent h-6 w-11 rounded-full"></div>
+                                </div>
+                            </label>
+                        </div>
+                    </div>
+                    <div class="relative bg-slate-900 p-4 sm:p-6">
+                        <button id="copyButton" class="absolute top-4 right-4 bg-slate-700 hover:bg-amber-500 text-white font-bold py-2 px-4 rounded-md transition-colors" onclick="copyCode()">Copy Code</button>
+                        <pre><code id="sqlCode" class="language-sql text-white text-sm overflow-x-auto block"></code></pre>
+                    </div>
+                </div>
+                 <div id="queryDescription" class="mt-4 p-4 bg-slate-100 rounded-lg text-slate-700"></div>
+            </section>
+
+            <!-- Section 4: Performance & Recommendations -->
+            <section id="recommendations">
+                <h2 class="text-3xl font-bold text-slate-900 mb-8 text-center">Best Practices & Recommendations</h2>
+                 <div class="max-w-4xl mx-auto text-center text-slate-700 mb-8">
+                    <p>Building the right query is only half the battle. To ensure your MECM environment remains performant and your reports are accurate, follow these key recommendations. These practices are critical for managing large-scale enterprise environments effectively.</p>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <div class="bg-white p-6 rounded-lg shadow-md border border-slate-200">
+                        <h3 class="font-semibold text-lg mb-2">✅ Verify Inventory Config</h3>
+                        <p class="text-slate-600">Ensure hardware inventory is set to collect `InstalledLocation0` from the `v_GS_INSTALLED_SOFTWARE_CATEGORIZED` class to get installation paths.</p>
+                    </div>
+                    <div class="bg-white p-6 rounded-lg shadow-md border border-slate-200">
+                        <h3 class="font-semibold text-lg mb-2">⚙️ Use Hybrid Matching</h3>
+                        <p class="text-slate-600">Adopt the multi-layered SQL strategy: normalize strings first, then match on Publisher/ProductID, and use fuzzy matching as a final step.</p>
+                    </div>
+                    <div class="bg-white p-6 rounded-lg shadow-md border border-slate-200">
+                        <h3 class="font-semibold text-lg mb-2">⚡️ Optimize Performance</h3>
+                        <p class="text-slate-600">Create indexes on join/where columns (`ResourceID`, `DisplayName0`), select only needed columns, and schedule large queries for off-peak hours.</p>
+                    </div>
+                    <div class="bg-white p-6 rounded-lg shadow-md border border-slate-200">
+                        <h3 class="font-semibold text-lg mb-2">🖥️ Size Hardware Correctly</h3>
+                        <p class="text-slate-600">Ensure your SQL Server has sufficient CPU, RAM, and fast storage to handle the load from inventory collection and complex reporting.</p>
+                    </div>
+                    <div class="bg-white p-6 rounded-lg shadow-md border border-slate-200">
+                        <h3 class="font-semibold text-lg mb-2">🕵️‍♂️ Report on Unmanaged Apps</h3>
+                        <p class="text-slate-600">Regularly run the "Find Unmanaged Apps" query to identify software installed outside of MECM for compliance and security audits.</p>
+                    </div>
+                    <div class="bg-white p-6 rounded-lg shadow-md border border-slate-200">
+                        <h3 class="font-semibold text-lg mb-2">🧪 Test in a Dev Environment</h3>
+                        <p class="text-slate-600">Before running in production, always test complex queries in a non-production environment to validate accuracy and performance impact.</p>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script>
+        const sqlQueries = [
+            {
+                name: "Initial Match",
+                description: "This query provides a foundational link between deployed applications and installed software. It uses a simple `LIKE` comparison, which is a good starting point but will miss many matches due to naming variations. It illustrates the basic join structure.",
+                fuzzy: `SELECT DISTINCT
+    ds.DeploymentName AS DeployedAppName,
+    ad.DisplayName AS DeployedAppDisplayName,
+    arp.DisplayName0 AS InstalledAppName,
+    vrs.Name0 AS DeviceName,
+    JARO_WINKLER_SIMILARITY(
+        UPPER(TRIM(ad.DisplayName)),
+        UPPER(TRIM(arp.DisplayName0))
+    ) AS MatchScore
+FROM v_DeploymentSummary AS ds
+JOIN v_Advertisement AS ad ON ds.AdvertisementID = ad.AdvertisementID
+JOIN v_Add_Remove_Programs AS arp ON ds.ResourceID = arp.ResourceID
+JOIN v_R_System AS vrs ON arp.ResourceID = vrs.ResourceID
+WHERE
+    UPPER(TRIM(ad.Publisher)) = UPPER(TRIM(arp.Publisher0))
+    AND JARO_WINKLER_SIMILARITY(
+        UPPER(TRIM(ad.DisplayName)), 
+        UPPER(TRIM(arp.DisplayName0))
+    ) >= 0.85
+ORDER BY DeviceName, DeployedAppName;`,
+                like: `SELECT DISTINCT
+    ds.DeploymentName AS DeployedAppName,
+    ad.DisplayName AS DeployedAppDisplayName,
+    arp.DisplayName0 AS InstalledAppName,
+    vrs.Name0 AS DeviceName
+FROM v_DeploymentSummary AS ds
+JOIN v_Advertisement AS ad ON ds.AdvertisementID = ad.AdvertisementID
+JOIN v_Add_Remove_Programs AS arp ON ds.ResourceID = arp.ResourceID
+JOIN v_R_System AS vrs ON arp.ResourceID = vrs.ResourceID
+WHERE
+    UPPER(TRIM(ad.DisplayName)) LIKE '%' + UPPER(TRIM(arp.DisplayName0)) + '%'
+    OR UPPER(TRIM(arp.DisplayName0)) LIKE '%' + UPPER(TRIM(ad.DisplayName)) + '%'
+ORDER BY DeviceName, DeployedAppName;`
+            },
+            {
+                name: "Get Install Location",
+                description: "This query extends the matching logic to retrieve the application's installation path. It joins with `v_GS_INSTALLED_SOFTWARE_CATEGORIZED` to get the `InstalledLocation0` field. Note: This requires the corresponding hardware inventory class to be enabled in MECM.",
+                fuzzy: `SELECT DISTINCT
+    vrs.Name0 AS DeviceName,
+    arp.DisplayName0 AS InstalledAppName,
+    isc.InstalledLocation0
+FROM v_Add_Remove_Programs AS arp
+JOIN v_R_System AS vrs ON arp.ResourceID = vrs.ResourceID
+JOIN v_GS_INSTALLED_SOFTWARE_CATEGORIZED AS isc ON arp.ResourceID = isc.ResourceID
+WHERE
+    JARO_WINKLER_SIMILARITY(
+        UPPER(TRIM(arp.DisplayName0)), 
+        UPPER(TRIM(isc.NormalizedName))
+    ) >= 0.95 -- High threshold for accuracy
+ORDER BY DeviceName, InstalledAppName;`,
+                like: `SELECT DISTINCT
+    vrs.Name0 AS DeviceName,
+    arp.DisplayName0 AS InstalledAppName,
+    isc.InstalledLocation0
+FROM v_Add_Remove_Programs AS arp
+JOIN v_R_System AS vrs ON arp.ResourceID = vrs.ResourceID
+JOIN v_GS_INSTALLED_SOFTWARE_CATEGORIZED AS isc ON arp.ResourceID = isc.ResourceID
+    AND UPPER(TRIM(arp.DisplayName0)) = UPPER(TRIM(isc.NormalizedName))
+ORDER BY DeviceName, InstalledAppName;`
+            },
+            {
+                name: "Find Unmanaged Apps",
+                description: "This powerful query helps identify 'rogue' or unmanaged software. It finds all installed applications on a client that do not have a corresponding deployment record in MECM, which is invaluable for compliance and licensing audits.",
+                fuzzy: `SELECT DISTINCT
+    vrs.Name0 AS DeviceName,
+    arp.DisplayName0 AS UnmanagedAppName,
+    arp.Publisher0 AS Publisher
+FROM v_Add_Remove_Programs AS arp
+JOIN v_R_System AS vrs ON arp.MachineID = vrs.ResourceID
+WHERE NOT EXISTS (
+    SELECT 1
+    FROM v_DeploymentSummary ds
+    JOIN v_Advertisement ad ON ds.AdvertisementID = ad.AdvertisementID
+    WHERE ds.ResourceID = arp.ResourceID
+    AND JARO_WINKLER_SIMILARITY(UPPER(TRIM(ad.DisplayName)), UPPER(TRIM(arp.DisplayName0))) >= 0.85
+)
+ORDER BY DeviceName, UnmanagedAppName;`,
+                like: `SELECT DISTINCT
+    vrs.Name0 AS DeviceName,
+    arp.DisplayName0 AS UnmanagedAppName,
+    arp.Publisher0 AS Publisher
+FROM v_Add_Remove_Programs AS arp
+JOIN v_R_System AS vrs ON arp.MachineID = vrs.ResourceID
+LEFT JOIN v_DeploymentSummary ds ON arp.ResourceID = ds.ResourceID
+    AND ds.DeploymentName LIKE '%' + arp.DisplayName0 + '%'
+WHERE ds.DeploymentName IS NULL
+ORDER BY DeviceName, UnmanagedAppName;`
+            }
+        ];
+        
+        const viewDetails = {
+            'v_DeploymentSummary': { title: 'v_DeploymentSummary', desc: 'Summarizes all active application deployments, including target collection, deployment name, and statistics.', keys: 'CollectionID, DeploymentName, PackageID, AdvertisementID' },
+            'v_Advertisement': { title: 'v_Advertisement', desc: 'Lists information about deployed packages and programs, including deployment ID, name, package ID, and collection ID.', keys: 'AdvertisementID, AdvertisementName, PackageID, CollectionID' },
+            'v_Program': { title: 'v_Program', desc: 'Lists programs for each package, including program name, package ID, and command line.', keys: 'ProgramName, PackageID' },
+            'v_R_System': { title: 'v_R_System (ResourceID)', desc: 'Contains core discovery data for all resources (computers). The `ResourceID` is the critical key for joining client-specific inventory data across all views.', keys: 'ResourceID, Name0, OperatingSystemNameandVersion0' },
+            'v_Add_Remove_Programs': { title: 'v_Add_Remove_Programs', desc: 'A comprehensive list of software installed on clients, as seen in the Windows Control Panel.', keys: 'ResourceID, DisplayName0, Version0, Publisher0' },
+            'v_GS_INSTALLED_SOFTWARE_CATEGORIZED': { title: 'v_GS_INSTALLED_SOFTWARE_CATEGORIZED', desc: 'The primary source for application installation paths via the `InstalledLocation0` field. Also contains normalized names and publisher info.', keys: 'ResourceID, NormalizedName, InstalledLocation0' }
+        };
+
+        let currentQueryIndex = 0;
+        let useFuzzy = false;
+
+        const codeElement = document.getElementById('sqlCode');
+        const descElement = document.getElementById('queryDescription');
+        const tabs = document.querySelectorAll('.tab');
+        const copyBtn = document.getElementById('copyButton');
+        const modal = document.getElementById('detailsModal');
+        const modalContent = document.getElementById('modalContent');
+        
+        function updateQueryDisplay() {
+            const query = sqlQueries[currentQueryIndex];
+            const code = useFuzzy ? query.fuzzy : query.like;
+            codeElement.textContent = code.trim();
+            descElement.innerHTML = `<h4 class="font-bold text-lg mb-2">${query.name}</h4><p>${query.description}</p>`;
+        }
+
+        function selectQuery(index) {
+            currentQueryIndex = index;
+            tabs.forEach((tab, i) => {
+                if (i === index) {
+                    tab.classList.add('active');
+                } else {
+                    tab.classList.remove('active');
+                }
+            });
+            updateQueryDisplay();
+        }
+
+        function toggleFuzzy() {
+            useFuzzy = document.getElementById('fuzzyToggle').checked;
+            updateQueryDisplay();
+        }
+
+        function copyCode() {
+            const textToCopy = codeElement.textContent;
+            const tempTextArea = document.createElement('textarea');
+            tempTextArea.value = textToCopy;
+            document.body.appendChild(tempTextArea);
+            tempTextArea.select();
+            document.execCommand('copy');
+            document.body.removeChild(tempTextArea);
+
+            copyBtn.textContent = 'Copied!';
+            setTimeout(() => {
+                copyBtn.textContent = 'Copy Code';
+            }, 2000);
+        }
+
+        function showDetails(viewName) {
+            const details = viewDetails[viewName];
+            modalContent.innerHTML = `
+                <h3 class="text-2xl font-bold mb-4 text-slate-900">${details.title}</h3>
+                <p class="text-slate-700 mb-4">${details.desc}</p>
+                <div class="bg-slate-100 p-3 rounded-md">
+                    <p class="font-semibold text-slate-600">Key Fields:</p>
+                    <p class="font-mono text-sm text-slate-800">${details.keys}</p>
+                </div>
+                <button class="mt-6 bg-amber-500 hover:bg-amber-600 text-white font-bold py-2 px-4 rounded-md w-full transition-colors" onclick="closeModal()">Close</button>
+            `;
+            modal.classList.remove('hidden');
+        }
+
+        function closeModal() {
+            modal.classList.add('hidden');
+        }
+
+        // Initial load
+        window.onload = () => {
+            selectQuery(0);
+        };
+    </script>
+
+</body>
+</html>
